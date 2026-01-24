@@ -1,0 +1,23 @@
+# 実行ファイル
+normal_rand
+brownian_motion
+
+# データファイル
+*.dat
+data/
+
+# 図ファイル
+*.png
+figures/
+
+# LaTeX中間ファイル
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# Pythonキャッシュ
+__pycache__/
+*.pyc
+*.pyo
