@@ -1,4 +1,4 @@
-# ブラウン運動の数値シミュレーション
+# 数値シミュレーションによるブラウン運動の解析
 
 ## 必要なファイル
 
@@ -75,8 +75,6 @@ int main(int argc, char *argv[]) {
 
 ### 3. plot_normal_rand.py
 
-50, 100, 1000回の正規乱数を生成し、3つのヒストグラムを表示します。
-
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
@@ -89,7 +87,6 @@ plt.rcParams['axes.unicode_minus'] = False
 os.makedirs('data', exist_ok=True)
 os.makedirs('figures', exist_ok=True)
 
-# 50, 100, 1000回の正規乱数を生成
 n_samples_list = [50, 100, 1000]
 data_list = []
 
@@ -97,14 +94,12 @@ for n_samples in n_samples_list:
     filename = f'normal_rand_{n_samples}.dat' if n_samples != 1000 else 'normal_rand.dat'
     filepath = os.path.join('data', filename)
     
-    # Cプログラムを実行してデータを生成
     with open(filepath, 'w') as f:
         subprocess.run(['./normal_rand', str(n_samples)], stdout=f)
     
     data = np.loadtxt(filepath)
     data_list.append((n_samples, data))
 
-# 3つのヒストグラムを表示
 fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
 for idx, (n_samples, data) in enumerate(data_list):
@@ -174,8 +169,6 @@ plt.close()
 
 ### 5. visualize_msd.py
 
-5回の試行を個別に重ねて表示し、平均も表示します。
-
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
@@ -202,22 +195,18 @@ for i in range(n_runs):
     trajectories.append((data[:, 0], data[:, 1], data[:, 2]))
 
 t = trajectories[0][0]
-# 各試行のMSDを計算
 msd_individual = []
 for _, x, y in trajectories:
     msd_individual.append(x**2 + y**2)
 
-# 平均MSDを計算
 msd = np.array([np.mean([msd_individual[j][i] for j in range(n_runs)]) for i in range(len(t))])
 
 plt.figure(figsize=(10, 8))
-# 5回の試行を個別に重ねて表示
 colors = plt.cm.tab10(np.linspace(0, 1, n_runs))
 for i in range(n_runs):
     plt.plot(t, msd_individual[i], '-', linewidth=1.5, alpha=0.6, 
              color=colors[i], label=f'試行 {i+1}')
 
-# 平均を太い線で表示
 plt.plot(t, msd, 'k-', linewidth=3, label='平均 <r²(t)>', alpha=0.9)
 
 plt.xlabel('時間 t')
@@ -378,8 +367,6 @@ plt.close()
 
 ### 7. analyze_energy.py
 
-粒子の運動エネルギー分布関数を計算し、温度依存性を調べます。
-
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
@@ -390,7 +377,6 @@ import sys
 plt.rcParams['font.family'] = 'Hiragino Sans'
 plt.rcParams['axes.unicode_minus'] = False
 
-# 温度を3通り設定
 T_values = [0.5, 1.0, 2.0]
 m, gamma, kB = 1.0, 1.0, 1.0
 dt, n_steps = 0.01, 1000
@@ -398,31 +384,26 @@ dt, n_steps = 0.01, 1000
 os.makedirs('data', exist_ok=True)
 os.makedirs('figures', exist_ok=True)
 
-# 各温度についてシミュレーションを実行し、エネルギーを計算
 energies_by_T = []
 
 for T in T_values:
     energies = []
-    # 複数回実行して統計を取る（より良い分布を得るため）
     n_runs = 10
     for run in range(n_runs):
         output_file = os.path.join('data', f'energy_T{T}_run{run+1}.dat')
         with open(output_file, 'w') as f:
             subprocess.run(['./brownian_motion', str(T), str(m), str(gamma), str(dt), str(n_steps)], stdout=f)
         
-        # データを読み込み
         data = np.loadtxt(output_file, comments='#')
         t = data[:, 0]
         vx = data[:, 3]
         vy = data[:, 4]
         
-        # 運動エネルギーを計算: E = (1/2) * m * (vx^2 + vy^2)
         energy = 0.5 * m * (vx**2 + vy**2)
         energies.extend(energy)
     
     energies_by_T.append((T, np.array(energies)))
 
-# ヒストグラムを描画
 plt.figure(figsize=(10, 7))
 colors = ['blue', 'red', 'green']
 for idx, (T, energies) in enumerate(energies_by_T):
@@ -453,8 +434,6 @@ gcc -o brownian_motion brownian_motion.c -lm
 ```bash
 python3 plot_normal_rand.py
 ```
-
-このスクリプトは自動的に50, 100, 1000回の正規乱数を生成し、3つのヒストグラムを表示します。
 
 ### 課題(2): ブラウン運動のシミュレーション
 
