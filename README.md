@@ -1,4 +1,4 @@
-# 数値シミュレーションによるブラウン運動の解析
+# ブラウン運動の数値シミュレーション
 
 ## 必要なファイル
 
@@ -75,6 +75,8 @@ int main(int argc, char *argv[]) {
 
 ### 3. plot_normal_rand.py
 
+50, 100, 1000回の正規乱数を生成し、3つのヒストグラムを表示します。
+
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
@@ -87,6 +89,7 @@ plt.rcParams['axes.unicode_minus'] = False
 os.makedirs('data', exist_ok=True)
 os.makedirs('figures', exist_ok=True)
 
+# 50, 100, 1000回の正規乱数を生成
 n_samples_list = [50, 100, 1000]
 data_list = []
 
@@ -94,12 +97,14 @@ for n_samples in n_samples_list:
     filename = f'normal_rand_{n_samples}.dat' if n_samples != 1000 else 'normal_rand.dat'
     filepath = os.path.join('data', filename)
     
+    # Cプログラムを実行してデータを生成
     with open(filepath, 'w') as f:
         subprocess.run(['./normal_rand', str(n_samples)], stdout=f)
     
     data = np.loadtxt(filepath)
     data_list.append((n_samples, data))
 
+# 3つのヒストグラムを表示
 fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
 for idx, (n_samples, data) in enumerate(data_list):
@@ -169,6 +174,8 @@ plt.close()
 
 ### 5. visualize_msd.py
 
+5回の試行を個別に重ねて表示し、平均も表示します。
+
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
@@ -195,18 +202,22 @@ for i in range(n_runs):
     trajectories.append((data[:, 0], data[:, 1], data[:, 2]))
 
 t = trajectories[0][0]
+# 各試行のMSDを計算
 msd_individual = []
 for _, x, y in trajectories:
     msd_individual.append(x**2 + y**2)
 
+# 平均MSDを計算
 msd = np.array([np.mean([msd_individual[j][i] for j in range(n_runs)]) for i in range(len(t))])
 
 plt.figure(figsize=(10, 8))
+# 5回の試行を個別に重ねて表示
 colors = plt.cm.tab10(np.linspace(0, 1, n_runs))
 for i in range(n_runs):
     plt.plot(t, msd_individual[i], '-', linewidth=1.5, alpha=0.6, 
              color=colors[i], label=f'試行 {i+1}')
 
+# 平均を太い線で表示
 plt.plot(t, msd, 'k-', linewidth=3, label='平均 <r²(t)>', alpha=0.9)
 
 plt.xlabel('時間 t')
@@ -367,6 +378,8 @@ plt.close()
 
 ### 7. analyze_energy.py
 
+粒子の運動エネルギー分布関数を計算し、温度依存性を調べます。
+
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
@@ -377,6 +390,7 @@ import sys
 plt.rcParams['font.family'] = 'Hiragino Sans'
 plt.rcParams['axes.unicode_minus'] = False
 
+# 温度を3通り設定
 T_values = [0.5, 1.0, 2.0]
 m, gamma, kB = 1.0, 1.0, 1.0
 dt, n_steps = 0.01, 1000
@@ -384,26 +398,31 @@ dt, n_steps = 0.01, 1000
 os.makedirs('data', exist_ok=True)
 os.makedirs('figures', exist_ok=True)
 
+# 各温度についてシミュレーションを実行し、エネルギーを計算
 energies_by_T = []
 
 for T in T_values:
     energies = []
+    # 複数回実行して統計を取る（より良い分布を得るため）
     n_runs = 10
     for run in range(n_runs):
         output_file = os.path.join('data', f'energy_T{T}_run{run+1}.dat')
         with open(output_file, 'w') as f:
             subprocess.run(['./brownian_motion', str(T), str(m), str(gamma), str(dt), str(n_steps)], stdout=f)
         
+        # データを読み込み
         data = np.loadtxt(output_file, comments='#')
         t = data[:, 0]
         vx = data[:, 3]
         vy = data[:, 4]
         
+        # 運動エネルギーを計算: E = (1/2) * m * (vx^2 + vy^2)
         energy = 0.5 * m * (vx**2 + vy**2)
         energies.extend(energy)
     
     energies_by_T.append((T, np.array(energies)))
 
+# ヒストグラムを描画
 plt.figure(figsize=(10, 7))
 colors = ['blue', 'red', 'green']
 for idx, (T, energies) in enumerate(energies_by_T):
@@ -420,6 +439,149 @@ plt.savefig(os.path.join('figures', 'energy_distribution.png'), dpi=150)
 plt.close()
 ```
 
+### 8. analyze_temperature.py
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+
+plt.rcParams['font.family'] = 'Hiragino Sans'
+plt.rcParams['axes.unicode_minus'] = False
+
+def simulate_brownian_motion(T, m, gamma, kB=1.0, dt=0.01, n_steps=1000, seed=None):
+    if seed is not None:
+        np.random.seed(seed)
+    rx, ry = 0.0, 0.0
+    vx, vy = 0.0, 0.0
+    coeff1 = gamma / m
+    coeff2 = np.sqrt(2.0 * gamma * kB * T / m)
+    t = np.zeros(n_steps + 1)
+    x = np.zeros(n_steps + 1)
+    y = np.zeros(n_steps + 1)
+    t[0] = 0.0
+    x[0] = rx
+    y[0] = ry
+    for n in range(n_steps):
+        eta_x = np.random.normal(0, 1)
+        eta_y = np.random.normal(0, 1)
+        vx = vx - coeff1 * vx * dt + coeff2 * np.sqrt(dt) * eta_x
+        vy = vy - coeff1 * vy * dt + coeff2 * np.sqrt(dt) * eta_y
+        rx += vx * dt
+        ry += vy * dt
+        t[n+1] = (n+1) * dt
+        x[n+1] = rx
+        y[n+1] = ry
+    return t, x, y
+
+def calculate_msd_from_trajectories(trajectories):
+    t = trajectories[0][0]
+    n_times = len(t)
+    n_runs = len(trajectories)
+    msd = np.zeros(n_times)
+    for t_idx in range(n_times):
+        r2_sum = 0.0
+        for _, x, y in trajectories:
+            r2_sum += x[t_idx]**2 + y[t_idx]**2
+        msd[t_idx] = r2_sum / n_runs
+    return t, msd
+
+def theoretical_msd(t, T=1.0, m=1.0, gamma=1.0, kB=1.0):
+    D = kB * T / gamma
+    tau = m / gamma
+    msd_theory = (4.0 * kB * T / gamma) * (t - tau * (1.0 - np.exp(-t / tau)))
+    msd_diffusion = 4.0 * D * t
+    return msd_theory, msd_diffusion, D
+
+os.makedirs('figures', exist_ok=True)
+
+kB, m, gamma, dt, n_steps, n_runs = 1.0, 1.0, 1.0, 0.01, 1000, 5
+T_values = [0.5, 1.0, 2.0]
+colors = ['blue', 'red', 'green']
+    
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+ax1 = axes[0, 0]
+for i, T in enumerate(T_values):
+    trajectories = []
+    for run in range(n_runs):
+        t, x, y = simulate_brownian_motion(T, m, gamma, kB, dt, n_steps, seed=run)
+        trajectories.append((t, x, y))
+        if run == 0:
+            ax1.plot(x, y, '-', linewidth=1.5, alpha=0.7, color=colors[i], label=f'T={T}')
+    ax1.plot(x[0], y[0], 'o', markersize=6, color=colors[i])
+    ax1.plot(x[-1], y[-1], 's', markersize=6, color=colors[i])
+ax1.set_xlabel('x')
+ax1.set_ylabel('y')
+ax1.set_title('異なる温度での軌道')
+ax1.legend()
+ax1.grid(True, alpha=0.3)
+ax1.axis('equal')
+
+ax2 = axes[0, 1]
+for i, T in enumerate(T_values):
+    trajectories = []
+    for run in range(n_runs):
+        t, x, y = simulate_brownian_motion(T, m, gamma, kB, dt, n_steps, seed=run)
+        trajectories.append((t, x, y))
+    t, msd = calculate_msd_from_trajectories(trajectories)
+    msd_theory, msd_diffusion, D = theoretical_msd(t, T, m, gamma, kB)
+    ax2.plot(t, msd, '-', linewidth=2, color=colors[i], alpha=0.8, label=f'シミュレーション T={T}')
+    ax2.plot(t, msd_theory, '--', linewidth=1.5, color=colors[i], alpha=0.6, label=f'理論値 T={T}')
+ax2.set_xlabel('時間 t')
+ax2.set_ylabel('平均二乗変位 <r²(t)>')
+ax2.set_title('異なる温度での平均二乗変位')
+ax2.legend()
+ax2.grid(True, alpha=0.3)
+
+ax3 = axes[1, 0]
+D_theory_list = []
+D_fit_list = []
+for T in T_values:
+    D_theory = kB * T / gamma
+    D_theory_list.append(D_theory)
+    trajectories = []
+    for run in range(n_runs):
+        t, x, y = simulate_brownian_motion(T, m, gamma, kB, dt, n_steps, seed=run)
+        trajectories.append((t, x, y))
+    t, msd = calculate_msd_from_trajectories(trajectories)
+    t_start = t[len(t)//2]
+    mask = t >= t_start
+    D_fit = np.mean(msd[mask] / (4.0 * t[mask]))
+    D_fit_list.append(D_fit)
+ax3.plot(T_values, D_theory_list, 'ro-', markersize=10, linewidth=2, label='理論値 D=kB*T/γ')
+ax3.plot(T_values, D_fit_list, 'bs--', markersize=8, linewidth=2, label='シミュレーションからのフィッティング値 D')
+ax3.set_xlabel('温度 T')
+ax3.set_ylabel('拡散係数 D')
+ax3.set_title('拡散係数の温度依存性')
+ax3.legend()
+ax3.grid(True, alpha=0.3)
+
+ax4 = axes[1, 1]
+for i, T in enumerate(T_values):
+    final_distances = []
+    for run in range(n_runs * 10):
+        t, x, y = simulate_brownian_motion(T, m, gamma, kB, dt, n_steps, seed=run)
+        final_distances.append(np.sqrt(x[-1]**2 + y[-1]**2))
+    ax4.hist(final_distances, bins=20, alpha=0.6, color=colors[i], label=f'T={T}', density=True)
+ax4.set_xlabel('最終距離 |r(t_final)|')
+ax4.set_ylabel('確率密度')
+ax4.set_title('最終位置の分布')
+ax4.legend()
+ax4.grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.savefig('figures/temperature_analysis.png', dpi=150)
+plt.close()
+
+print("\n" + "=" * 60)
+print("温度解析結果")
+print("=" * 60)
+for i, T in enumerate(T_values):
+    print(f"T={T:.2f}: D_theory={D_theory_list[i]:.6f}, D_fit={D_fit_list[i]:.6f}, "
+          f"error={abs(D_theory_list[i]-D_fit_list[i])/D_theory_list[i]*100:.2f}%")
+```
+
 ## コンパイル方法
 
 ```bash
@@ -434,6 +596,8 @@ gcc -o brownian_motion brownian_motion.c -lm
 ```bash
 python3 plot_normal_rand.py
 ```
+
+このスクリプトは自動的に50, 100, 1000回の正規乱数を生成し、3つのヒストグラムを表示します。
 
 ### 課題(2): ブラウン運動のシミュレーション
 
@@ -464,3 +628,5 @@ python3 analyze_diffusion.py
 ```bash
 python3 analyze_energy.py
 ```
+
+このスクリプトは温度Tを3通り（0.5, 1.0, 2.0）変化させて、粒子の運動エネルギー分布関数をヒストグラムとして表示します。
