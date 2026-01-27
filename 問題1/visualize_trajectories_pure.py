@@ -1,13 +1,13 @@
 """
-visualize_trajectories.py
+visualize_trajectories_pure.py
 
-目的: ブラウン運動の2次元軌道を可視化
+目的: ブラウン運動の2次元軌道を可視化（Pythonのみ版）
 - 複数回のシミュレーション実行結果を重ねて表示
 - 各軌道の開始点と終了点をマーカーで表示
 
 処理の流れ:
 1. コマンドライン引数から実行回数を取得（デフォルト: 5回）
-2. 各実行についてCプログラム（brownian_motion）を実行して軌道データを生成
+2. 各実行についてブラウン運動をシミュレート
 3. 全軌道を2次元平面上に描画
 4. 開始点（○）と終了点（□）をマーカーで表示
 5. 図をファイルに保存
@@ -15,7 +15,6 @@ visualize_trajectories.py
 
 import numpy as np          # 数値計算ライブラリ
 import matplotlib.pyplot as plt  # グラフ描画ライブラリ
-import subprocess           # 外部プログラム実行用
 import os                   # ファイル操作用
 import sys                  # コマンドライン引数の取得用
 
@@ -24,17 +23,71 @@ plt.rcParams['font.family'] = 'Hiragino Sans'
 # マイナス記号の文字化けを防ぐ設定
 plt.rcParams['axes.unicode_minus'] = False
 
+def simulate_brownian_motion(T=1.0, m=1.0, gamma=1.0, kB=1.0, dt=0.01, n_steps=1000, seed=None):
+    """
+    ブラウン運動を数値的にシミュレートする関数
+    
+    @param T: 温度（デフォルト: 1.0）
+    @param m: 粒子の質量（デフォルト: 1.0）
+    @param gamma: 摩擦係数（デフォルト: 1.0）
+    @param kB: ボルツマン定数（デフォルト: 1.0）
+    @param dt: 時間刻み（デフォルト: 0.01）
+    @param n_steps: 時間ステップ数（デフォルト: 1000）
+    @param seed: 乱数のシード（デフォルト: None）
+    @return: (t, x, y, vx, vy) のタプル（時刻、x座標、y座標、x速度、y速度の配列）
+    """
+    # 乱数のシードを設定（再現性のため）
+    if seed is not None:
+        np.random.seed(seed)
+    
+    # 初期条件
+    rx, ry = 0.0, 0.0  # 初期位置（原点）
+    vx, vy = 0.0, 0.0  # 初期速度（ゼロ）
+    
+    # ランジュバン方程式の係数を事前計算
+    coeff1 = gamma / m  # 減衰項の係数: -(γ/m)
+    coeff2 = np.sqrt(2.0 * gamma * kB * T / m)  # ノイズ項の係数: sqrt(2γkBT/m)
+    
+    # 配列を初期化
+    t = np.zeros(n_steps + 1)  # 時刻の配列
+    x = np.zeros(n_steps + 1)  # x座標の配列
+    y = np.zeros(n_steps + 1)  # y座標の配列
+    vx_arr = np.zeros(n_steps + 1)  # x速度の配列
+    vy_arr = np.zeros(n_steps + 1)  # y速度の配列
+    
+    # 初期値を設定
+    t[0] = 0.0
+    x[0] = rx
+    y[0] = ry
+    vx_arr[0] = vx
+    vy_arr[0] = vy
+    
+    # 時間発展のループ（オイラー法で数値積分）
+    for n in range(n_steps):
+        # 標準正規分布に従う乱数（ホワイトノイズ）を生成
+        eta_x = np.random.normal(0, 1)  # x方向のノイズ
+        eta_y = np.random.normal(0, 1)   # y方向のノイズ
+        
+        # ランジュバン方程式に基づいて速度を更新
+        vx = vx - coeff1 * vx * dt + coeff2 * np.sqrt(dt) * eta_x
+        vy = vy - coeff1 * vy * dt + coeff2 * np.sqrt(dt) * eta_y
+        
+        # 位置を更新
+        rx += vx * dt  # x座標を更新
+        ry += vy * dt  # y座標を更新
+        
+        # 配列に値を保存
+        t[n+1] = (n+1) * dt
+        x[n+1] = rx
+        y[n+1] = ry
+        vx_arr[n+1] = vx
+        vy_arr[n+1] = vy
+    
+    return t, x, y, vx_arr, vy_arr
+
 # スクリプトのディレクトリに移動
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
-
-# Cプログラムをコンパイル（必要に応じて）
-source_file = 'brownian_motion.c'
-executable_name = './brownian_motion'
-
-if not os.path.exists(executable_name) or \
-   os.path.getmtime(source_file) > os.path.getmtime(executable_name):
-    subprocess.run(['gcc', '-o', executable_name, source_file, '-lm'])
 
 # コマンドライン引数から実行回数を取得（指定がない場合はデフォルト値5を使用）
 n_runs = int(sys.argv[1]) if len(sys.argv) > 1 else 5
@@ -51,12 +104,14 @@ for i in range(n_runs):
     # 各実行の出力ファイル名を決定（trajectory_1.dat, trajectory_2.dat, ...）
     output_file = os.path.join('data', f'trajectory_{i+1}.dat')
     
-    # Cプログラム（brownian_motion）を実行して軌道データを生成し、ファイルに保存
-    with open(output_file, 'w') as f:
-        # デフォルトパラメータでブラウン運動をシミュレート
-        subprocess.run([executable_name], stdout=f)
+    # ブラウン運動をシミュレート（各実行で異なるシードを使用）
+    t, x, y, vx, vy = simulate_brownian_motion(seed=i)
     
-    # 生成されたデータファイルを読み込む（#で始まるコメント行は無視）
+    # データをdatファイルに保存（Cプログラムと同じ形式: t x y vx vy）
+    data = np.column_stack([t, x, y, vx, vy])
+    np.savetxt(output_file, data, fmt='%.15e', header='t x y vx vy', comments='#')
+    
+    # datファイルからデータを読み込む（#で始まるコメント行は無視）
     data = np.loadtxt(output_file, comments='#')
     # データから時刻t、x座標、y座標を抽出してリストに追加
     # data[:, 0]: 時刻t, data[:, 1]: x座標, data[:, 2]: y座標
@@ -102,6 +157,6 @@ plt.ylim(all_y.min() - margin * (all_y.max() - all_y.min()),
 # レイアウトを調整
 plt.tight_layout()
 # 図をファイルに保存（解像度150dpi）
-plt.savefig(os.path.join('figures', 'trajectories_2d.png'), dpi=150)
+plt.savefig(os.path.join('figures', 'trajectories_2d_pure.png'), dpi=150)
 # メモリを解放するために図を閉じる
 plt.close()
