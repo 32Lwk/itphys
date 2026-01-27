@@ -41,25 +41,11 @@ double normal_rand() {
  * 
  * @param argc コマンドライン引数の個数
  * @param argv コマンドライン引数の配列（argv[1]に生成する乱数の個数が入る）
- * @return 正常終了時は0を返す、エラー時は1を返す
+ * @return 正常終了時は0を返す
  */
 int main(int argc, char *argv[]) {
-    // コマンドライン引数のチェック
-    if (argc < 2) {
-        fprintf(stderr, "エラー: 引数が指定されていません。\n");
-        fprintf(stderr, "使用方法: %s <乱数の個数>\n", argv[0]);
-        return 1;
-    }
-    
     // コマンドライン引数から生成する乱数の個数を取得
     int n_samples = atoi(argv[1]);
-    
-    // 引数の妥当性チェック
-    if (n_samples <= 0) {
-        fprintf(stderr, "エラー: 乱数の個数は正の整数である必要があります。\n");
-        fprintf(stderr, "指定された値: %s\n", argv[1]);
-        return 1;
-    }
     
     // 乱数生成器を現在時刻で初期化（毎回異なる乱数列を生成するため）
     srand((unsigned int)time(NULL));

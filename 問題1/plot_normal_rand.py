@@ -17,97 +17,24 @@ import numpy as np          # 数値計算ライブラリ
 import matplotlib.pyplot as plt  # グラフ描画ライブラリ
 import subprocess           # 外部プログラム実行用
 import os                   # ファイル操作用
-import sys                  # システム関連（エラー処理用）
 
 # 日本語フォントの設定（Hiragino Sansを使用）
 plt.rcParams['font.family'] = 'Hiragino Sans'
 # マイナス記号の文字化けを防ぐ設定
 plt.rcParams['axes.unicode_minus'] = False
 
-def compile_c_program(source_file, executable_name):
-    """
-    Cプログラムをコンパイルする関数
-    
-    @param source_file: ソースファイルのパス
-    @param executable_name: 実行可能ファイルの名前
-    @return: コンパイル成功時はTrue、失敗時はFalse
-    """
-    # ソースファイルの存在確認
-    if not os.path.exists(source_file):
-        print(f"エラー: ソースファイル '{source_file}' が見つかりません。", file=sys.stderr)
-        return False
-    
-    # 実行可能ファイルが既に存在し、ソースファイルより新しい場合はスキップ
-    if os.path.exists(executable_name):
-        source_mtime = os.path.getmtime(source_file)
-        exec_mtime = os.path.getmtime(executable_name)
-        if exec_mtime > source_mtime:
-            print(f"実行可能ファイル '{executable_name}' は既に最新です。")
-            return True
-    
-    # コンパイルコマンドを実行
-    print(f"コンパイル中: {source_file} -> {executable_name}")
-    result = subprocess.run(
-        ['gcc', '-o', executable_name, source_file, '-lm'],
-        capture_output=True,
-        text=True
-    )
-    
-    if result.returncode != 0:
-        print(f"コンパイルエラー:", file=sys.stderr)
-        print(result.stderr, file=sys.stderr)
-        return False
-    
-    print(f"コンパイル成功: {executable_name}")
-    return True
-
-def run_normal_rand(n_samples, executable='./normal_rand'):
-    """
-    normal_randプログラムを実行して正規分布乱数を生成する関数
-    
-    @param n_samples: 生成する乱数の個数
-    @param executable: 実行可能ファイルのパス
-    @return: 生成された乱数の配列、エラー時はNone
-    """
-    try:
-        # プログラムを実行して結果を取得
-        result = subprocess.run(
-            [executable, str(n_samples)],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        
-        # 出力を数値のリストに変換
-        data = [float(line.strip()) for line in result.stdout.strip().split('\n') if line.strip()]
-        
-        if len(data) != n_samples:
-            print(f"警告: 期待される個数 {n_samples} に対して、実際には {len(data)} 個のデータが生成されました。", file=sys.stderr)
-        
-        return np.array(data)
-    
-    except subprocess.CalledProcessError as e:
-        print(f"エラー: normal_randの実行に失敗しました。", file=sys.stderr)
-        print(f"エラーメッセージ: {e.stderr}", file=sys.stderr)
-        return None
-    except FileNotFoundError:
-        print(f"エラー: 実行可能ファイル '{executable}' が見つかりません。", file=sys.stderr)
-        return None
-    except Exception as e:
-        print(f"エラー: 予期しないエラーが発生しました: {e}", file=sys.stderr)
-        return None
-
 # スクリプトのディレクトリに移動（相対パスを正しく解決するため）
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 
-# Cプログラムをコンパイル
+# Cプログラムをコンパイル（必要に応じて）
 source_file = 'normal_rand.c'
 executable_name = './normal_rand'
 
-if not compile_c_program(source_file, executable_name):
-    print("エラー: Cプログラムのコンパイルに失敗しました。", file=sys.stderr)
-    sys.exit(1)
+# 実行可能ファイルが存在しない、またはソースファイルより古い場合はコンパイル
+if not os.path.exists(executable_name) or \
+   os.path.getmtime(source_file) > os.path.getmtime(executable_name):
+    subprocess.run(['gcc', '-o', executable_name, source_file, '-lm'])
 
 # データと図を保存するディレクトリを作成（既に存在する場合は何もしない）
 os.makedirs('data', exist_ok=True)      # データファイル用ディレクトリ
@@ -120,24 +47,18 @@ data_list = []
 
 # 各サンプル数について正規分布乱数を生成
 for n_samples in n_samples_list:
-    print(f"処理中: {n_samples}個の正規分布乱数を生成...")
-    
-    # Cプログラムを実行して正規分布乱数を生成
-    data = run_normal_rand(n_samples, executable_name)
-    
-    if data is None:
-        print(f"エラー: {n_samples}個の乱数生成に失敗しました。", file=sys.stderr)
-        sys.exit(1)
-    
     # ファイル名を決定（1000の場合はnormal_rand.dat、それ以外はnormal_rand_{n_samples}.dat）
     filename = f'normal_rand_{n_samples}.dat' if n_samples != 1000 else 'normal_rand.dat'
     # データディレクトリ内のファイルパスを作成
     filepath = os.path.join('data', filename)
     
-    # データをファイルに保存（後で確認できるように）
-    np.savetxt(filepath, data, fmt='%.15e')
-    print(f"データを保存: {filepath}")
+    # Cプログラム（normal_rand）を実行して正規分布乱数を生成し、ファイルに保存
+    with open(filepath, 'w') as f:
+        # subprocess.runで外部プログラムを実行し、標準出力をファイルに書き込む
+        subprocess.run([executable_name, str(n_samples)], stdout=f)
     
+    # 生成されたデータファイルを読み込む
+    data = np.loadtxt(filepath)
     # サンプル数とデータのペアをリストに追加
     data_list.append((n_samples, data))
 
