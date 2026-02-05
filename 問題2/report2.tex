@@ -1,0 +1,51 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{fontspec}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{bm}
+\setmainfont{Hiragino Mincho ProN}
+
+\title{問題2 2準位系のボルツマン統計と温度}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{表2・表3：エントロピー $S(E)$ のプロット}
+図\ref{fig:entropy}に，$x = E/E_0 = M/N$，$s = S/N$ の数値計算（$N=20,50,100$）と，Stirling 近似 $s_{\mathrm{approx}}(x) = -[x\ln x + (1-x)\ln(1-x)]$ を示す。$N$ を大きくするほど数値結果は極限曲線に近づく。
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{fig_entropy.pdf}
+  \caption{エントロピー $s = S/N$ と Stirling 近似の比較}
+  \label{fig:entropy}
+\end{figure}
+
+\section{表4・表5：温度の数値計算と理論値の比較}
+図\ref{fig:temp}に，有限差分 $T(M) \approx (S(M+1)-S(M-1))/(E(M+1)-E(M-1))$ で求めた温度と，Stirling 近似から得られる $T_{\mathrm{th}}(x) = [\ln((1-x)/x)]^{-1}$ を示す。$N$ が大きいほど数値の温度は理論曲線に沿う。
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{fig_temperature.pdf}
+  \caption{温度 $T$ の数値計算と Stirling 理論値の比較}
+  \label{fig:temp}
+\end{figure}
+
+\section{表6 考察}
+
+\subsection*{エントロピーが最大値をとるエネルギー}
+$x = E/E_0 = M/N$ に対して $s(x) = S/N$ は $x = 1/2$（すなわち $E = E_0/2$，$M = N/2$）で最大となる。
+
+理由：状態数は $W(M) = \binom{N}{M}$ であり，$M = N/2$ のとき「半分が励起・半分が基底」の組み合わせ数が最大になる。Stirling 近似でも $s(x) = -[x\ln x + (1-x)\ln(1-x)]$ を $x$ で微分すると $x=1/2$ で $ds/dx = 0$ となり最大である。
+
+\subsection*{エントロピー最大付近での温度の符号}
+$1/T = (\partial S/\partial E)_N$ であり，$x=1/2$ では $\partial S/\partial E = 0$ となるので，$T$ は正の無限大に発散する（「無限大温度」）。したがって，最大付近では $T$ は非常に大きな正の値であり，$x$ が $1/2$ をわずかに超えると $dS/dE < 0$ となるため \textbf{負の温度} が現れる。すなわち，エントロピー最大の「少し上」のエネルギー側で温度は負となる。
+
+\subsection*{本問題で負の温度が現れる理由と正・負の温度の大小}
+本系ではエネルギー準位が 0 と $\varepsilon$ の2つしかなく，$E$ を増やすと励起粒子数 $M$ が増え，状態数 $W(M) = \binom{N}{M}$ は $M = N/2$ までは増加し，それ以降は減少する。よって $E > E_0/2$ の領域では $dS/dE < 0$ となり，$T = (\partial E/\partial S)_N < 0$ と定義されるため負の温度が許される。
+
+熱力学では「熱が高温から低温へ流れる」という性質から，\textbf{負の温度は正のいかなる温度よりも「高温」}と解釈される。つまり $T < 0$ の状態は $T \to +0$ より熱力学的には「上」にあり，$T \to -\infty$ が最も「低温」側の負温度である。
+
+\subsection*{実際の自然現象で負の温度が少ない理由}
+通常の系ではエネルギーに上界がなく，$E$ を増やすと状態数（密度）は単調に増大し，$dS/dE > 0$ なので $T > 0$ に限られる。本問題のように \textbf{エネルギーに上限がある有限準位系}（$E \le E_0 = N\varepsilon$）では，$E$ が大きい領域で状態数が減るため $dS/dE < 0$ となり負の温度が定義できる。実際に負温度が実現する例は，スピン系のように励起状態数に上限がある系に限られ，そのような系は自然界では限定的である。
+
+\end{document}
