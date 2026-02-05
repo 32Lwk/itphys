@@ -1,6 +1,24 @@
 # 問題2: 2準位系のボルツマン統計と温度の数値計算（表1〜5）
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+
+# 日本語フォント設定（文字化け防止）
+def _setup_japanese_font():
+    for f in fm.fontManager.ttflist:
+        p, n = getattr(f, "fname", ""), getattr(f, "name", "")
+        if "Hiragino Sans" in str(n) and "角" in str(p):
+            try:
+                fm.fontManager.addfont(p)
+                plt.rcParams["font.family"] = fm.FontProperties(fname=p).get_name()
+                break
+            except Exception:
+                pass
+    else:
+        plt.rcParams["font.family"] = ["Hiragino Sans", "sans-serif"]
+    plt.rcParams["axes.unicode_minus"] = False
+
+_setup_japanese_font()
 
 # ln C(N,M) = Σ_{k=1}^M ln(N-k+1) - Σ_{k=1}^M ln(k)
 def entropy_boltzmann(N, M):
@@ -33,9 +51,11 @@ def main():
     plt.xlabel(r'$x = E/E_0 = M/N$')
     plt.ylabel(r'$s = S/N$')
     plt.legend()
+    plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig('fig_entropy.pdf')
+    plt.savefig('fig_entropy.png', dpi=150)
     plt.close()
+    print('fig_entropy.png を保存しました。')
 
     # 表4: 温度の数値計算 T(M) ≈ (S(M+1)-S(M-1)) / (E(M+1)-E(M-1)), E=M (ε=1)
     # 表5: T のプロット（Stirling 理論値との比較）
@@ -62,9 +82,11 @@ def main():
     plt.xlabel(r'$x = E/E_0 = M/N$')
     plt.ylabel(r'$T$')
     plt.legend()
+    plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig('fig_temperature.pdf')
+    plt.savefig('fig_temperature.png', dpi=150)
     plt.close()
+    print('fig_temperature.png を保存しました。')
 
 if __name__ == '__main__':
     main()

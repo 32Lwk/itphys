@@ -1,0 +1,59 @@
+\documentclass[11pt]{jsarticle}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{bm}
+
+\title{問題1 回答：ランジュバン方程式とブラウン運動}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{扱う方程式}
+
+質量 $m$ の粒子の速度 $\bm{v}(t)$ と位置 $\bm{r}(t)$ について
+\begin{align}
+m \frac{d\bm{v}}{dt} &= -\gamma \bm{v} + \bm{\xi}(t), \label{eq:Lan}\\
+\frac{d\bm{r}}{dt} &= \bm{v}. \label{eq:dr}
+\end{align}
+ここで $\gamma$ は摩擦係数、$\bm{\xi}(t)$ はランダム力であり、$\Delta t$ 時間の積分が
+\[
+\int_t^{t+\Delta t} \bm{\xi}(t')\,dt' = \sqrt{2\gamma k_B T\,\Delta t}\,\bm{\eta},\quad \bm{\eta}\sim \mathcal{N}(0,1)\text{（各成分独立）}
+\]
+で与えられるとする。離散化（$t_n = n\Delta t$）すると
+\begin{align}
+\bm{v}_{n+1} &= \bm{v}_n - \frac{\gamma}{m}\bm{v}_n\Delta t + \sqrt{\frac{2\gamma k_B T}{m}}\sqrt{\Delta t}\,\bm{\eta}_n, \\
+\bm{r}_{n+1} &= \bm{r}_n + \bm{v}_n\Delta t.
+\end{align}
+
+\section{拡散係数 $D$ の理論式（問題(6)）}
+
+長時間では位置の分布は拡散方程式に従い、平均二乗変位は
+\[
+\langle r^2(t) \rangle = \langle |\bm{r}(t)-\bm{r}(0)|^2 \rangle \sim 4 D t \quad (t\to\infty).
+\]
+2次元なので、1次元あたりの拡散係数を $D$ とすると $\langle x^2\rangle =\langle y^2\rangle = 2Dt$ より $\langle r^2\rangle = 4Dt$ である。
+
+アインシュタインの関係より、ランジュバン方程式から得られる拡散係数は
+\begin{equation}
+\boxed{D = \frac{k_B T}{\gamma}.}
+\label{eq:D}
+\end{equation}
+質量 $m$ はこの式には現れない（長時間・ overdamped 極限での拡散係数）。
+
+\subsection{式(4)からの導出の要点}
+
+速度の定常状態では $\langle v^2 \rangle = k_B T/m$（等分配則）であり、摩擦 $\gamma$ と揺動の強さ $2\gamma k_B T$ が釣り合っている（揺動散逸定理）。変位の2次モーメントの時間発展を追うと、長時間で $\langle r^2 \rangle \propto t$ となり、その比例係数から $D = k_B T/\gamma$ が得られる。
+
+\section{数値計算との対応}
+
+\begin{itemize}
+\item (1) 正規乱数：\texttt{q1\_normal\_rand.py} で \texttt{normal\_rand.dat} を生成し、ヒストグラム（bins=20）を作成した。
+\item (2) 軌道：\texttt{langevin.c} で $r_0=(0,0)$, $v_0=(0,0)$, $\gamma=k_B=T=m=1$, $\Delta t=0.01$, 1000 ステップで $(x,y)$, $(v_x,v_y)$ を出力した。
+\item (3)(4) \texttt{q3\_trajectories.py} で5回実行し、軌道の図2種類（$(x,y)$ と $t$--$x,y$）を作成した。
+\item (5) \texttt{q5\_msd.py} で5回平均の $\langle r^2(t)\rangle$ をプロットした。
+\item (6) \texttt{q6\_compare\_D.py} で理論 $D=k_B T/\gamma$ と、$\langle r^2(t)\rangle$ の長時間域からのフィットで得た $D$ を比較した。図は \texttt{fig\_D\_compare.pdf}。
+\end{itemize}
+
+\end{document}
